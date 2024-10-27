@@ -4,6 +4,8 @@
 # Date: 25 Oct 2024
 # Contact: marzia.zaidi@utoronto.ca 
 # License: MIT
+# Pre-requisites: Need to have the data downloaded
+
 
 #### Workspace setup ####
 library(tidyverse)
