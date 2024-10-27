@@ -50,7 +50,7 @@ The model's results show Donald Trump has a slight lead at the national level. H
 As expected, larger sample sizes, such as those with over 5,000 people responding, results in more reliable estimates. For example, in Arizona, Trump's predicted support goes down from 51% where the polls are smaller to 49% in larger ones, and this reflects the increased accuracy of larger samples.
 
 
-The paper is structured as follows: we begin by describing the dataset and its key variables, after which the model is presented, followed by the results and their implications. In the last part of the paper, we critique the method itself and attempt to abstract some of the learnings into our understanding of the world.
+The paper is structured as follows: we begin by describing the dataset and its key variables, after which the model is presented, followed by the results and their implications. We use the statistical programming language R [@citeR] to conduct our analysis. In the last part of the paper, we critique the method itself and attempt to abstract some of the learnings into our understanding of the world.
 
 
 
