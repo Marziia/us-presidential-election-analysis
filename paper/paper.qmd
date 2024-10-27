@@ -432,7 +432,7 @@ Results from the survey will be aggregated with other polls (e.g., **Gallup**, *
 
 A sample version of the survey has been created using Google Forms. It can be accessed here:
 
-**[Google Forms: U.S. Presidential Election Forecast Survey](ADD LINK HERE)**  
+**[Google Forms: U.S. Presidential Election Forecast Survey](https://docs.google.com/forms/d/e/1FAIpQLSfz7Igz8zykp6TuRYLTt8KQeInVP0WhW8iWkj4ppmtL0oZ25Q/viewform)**  
 
 
 ---
