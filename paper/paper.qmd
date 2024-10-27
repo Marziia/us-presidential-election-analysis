@@ -1,0 +1,512 @@
+---
+title: "Forecasting the 2024 US Presidential Election: Poll Quality, Sample Size, and Party Vote Share"
+subtitle: "A Generalized Linear Model Based on Aggregated Poll Data with Moderate Poll Quality and Close Party Competition"
+author: 
+  - Marzia Zaidi
+thanks: "Code and data are available at: [https://github.com/Marziia/us-presidential-election-analysis](https://github.com/Marziia/us-presidential-election-analysis)."
+date: today
+date-format: long
+abstract: |
+  This paper presents a model that forecasts the 2024 U.S. presidential election using data from over 14,000 aggregated polls. The model incorporates poll quality, sample size, state effects, and party affiliation to assess the likelihood of candidate success. Results from the analysis show that Donald Trump leads slightly with 43.7% of the vote, compared to Kamala Harris at 43.1%, a difference of 0.6%. In key battleground states, Trump is expected to win Florida by 51% to 49%, and Harris holds a higher edge in Pennsylvania at 52% to 48%. Poll quality is moderate for both candidates. The analysis shows that poll characteristics and state-specific factors play important roles in shaping election predictions.
+
+format: pdf
+number-sections: true
+bibliography: references.bib
+appendix: true
+
+---
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+
+## Setup for workspace ##
+# Load necessary libraries
+# Load the tidyverse meta-package (includes dplyr, ggplot2, and readr)
+library(tidyverse)
+# Load the gt library for better visualization of some tables
+library(gt)
+# Load the knitr library for better visualization of some tables
+library(knitr)
+# The broom library is used for converting the model output into a tidy data frame
+library(broom)
+
+
+# Load data
+```
+
+
+# Introduction
+
+Election forecasting plays an important role in understanding voter behavior and predicting political outcomes, and this is especially valuable in competitive elections like the U.S. presidential race. Forecasts help candidates, political strategists, and the public by providing a data-driven way to anticipate results and adjust strategies based on what is being projected. The 2024 U.S. presidential election has Kamala Harris representing the Democratic Party and Donald Trump for the Republican Party. Given the close nature of this race, polling data is useful in predicting the outcome. 
+
+Aggregating polling data from various sources can improve prediction accuracy by minimizing errors and biases in individual polls [@blumenthal2014; @pasek2015]. We consider the following factors to augment the aggregation -  poll quality, sample size, and state-level differences. This study addresses how each of these specific factors contribute to predicting the results of the U.S. presidential election. National polling models already exist, and the focus here is on the combined impact of poll quality and state-level differences on predictions. 
+
+We use around 14,000 aggregated polls compiled by sources FiveThirtyEight [@fivethirtyeight2024]. The polls in differ in methodology, transparency, and sample sizes, and these can all affect reliability. Additionally, voter preferences can vary by region, and "battleground" states like Florida and Pennsylvania require a deeper analysis, as their outcomes are critical to the result of the election.
+
+The model's results show Donald Trump has a slight lead at the national level. He captures 43.7% of the popular vote with Kamala Harris coming in at 43.1%. Poll quality and sample size are shown to significantly affect predictions. For instance, higher pollscore values, such as 1.5, are associated with the predictions being more balanced. For example, in Florida, higher-quality polls decrease Trump's lead from 52% to 51%, and similarly, in Pennsylvania, Kamala Harris' lead tightens from 53% to 52% when the polls are of higher quality.
+
+As expected, larger sample sizes, such as those with over 5,000 people responding, results in more reliable estimates. For example, in Arizona, Trump's predicted support goes down from 51% where the polls are smaller to 49% in larger ones, and this reflects the increased accuracy of larger samples.
+
+
+The paper is structured as follows: we begin by describing the dataset and its key variables, after which the model is presented, followed by the results and their implications. In the last part of the paper, we critique the method itself and attempt to abstract some of the learnings into our understanding of the world.
+
+
+
+# Data
+
+The dataset used in this study consists of polling data from the 2024 U.S. presidential election, which was sourced from the **FiveThirtyEight** public polling aggregator. FiveThirtyEight compiles polling data from various polling firms and acts as a provider for updated information on national and state-level elections ([FiveThirtyEight, 2024](https://projects.fivethirtyeight.com/polls/)).
+
+## Key Variables:
+- **pollscore**: A numerical rating of poll quality, where higher scores indicate more reliable methods.
+- **sample_size**: The number of respondents in each poll.
+- **state**: The U.S. state where the poll was conducted.
+- **party**: The political party of the candidate (DEM = 1, REP = 0).
+- **candidate_name**: The candidate's name.
+- **pct**: The percentage of votes a candidate received in the poll.
+- **win**: A binary variable indicating whether the candidate won the poll (1 = win, 0 = lose).
+
+The analysis focuses on how **pollscore**, **sample_size**, and **state** influence the probability of a candidate winning a poll. The **pct** variable was used to create the binary **win** variable.
+
+## Data Cleaning and Preprocessing
+
+Data cleaning involved removing polls with missing values for key variables and creating a binary **win** variable to represent whether a candidate received a majority of the vote. The **state** and **party** variables were categorized for inclusion in the model.
+
+### Summary Statistics
+
+Summary statistics provide an overview of the key variables. **Pollscore** averages around **-0.38**, indicating moderate poll quality overall. The average **sample_size** is approximately **1,650 respondents**, while vote shares for **Democratic** and **Republican** candidates are both around **43%**, suggesting a competitive race.
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+
+
+# Load the data
+polls_data_cleaned <- read_csv(here::here("data/analysis_data/election_polls_cleaned.csv"))
+# Summary statistics for numeric variables
+# Basic statistics (Mean and SD)
+basic_stats <- polls_data_cleaned %>%
+  summarise(
+    Poll_Score_Mean = mean(pollscore, na.rm = TRUE),
+    Poll_Score_SD = sd(pollscore, na.rm = TRUE),
+    Sample_Size_Mean = mean(sample_size, na.rm = TRUE),
+    Sample_Size_SD = sd(sample_size, na.rm = TRUE),
+    Pct_Mean = mean(pct, na.rm = TRUE),
+    Pct_SD = sd(pct, na.rm = TRUE)
+  )
+
+
+# Min and Max statistics
+min_max_stats <- polls_data_cleaned %>%
+  summarise(
+    Poll_Score_Min = min(pollscore, na.rm = TRUE),
+    Poll_Score_Max = max(pollscore, na.rm = TRUE),
+    Sample_Size_Min = min(sample_size, na.rm = TRUE),
+    Sample_Size_Max = max(sample_size, na.rm = TRUE),
+    Pct_Min = min(pct, na.rm = TRUE),
+    Pct_Max = max(pct, na.rm = TRUE)
+  )
+
+# Frequency tables for categorical variables
+categorical_summary <- polls_data_cleaned %>%
+  select(state, party, candidate_name) %>%
+  summarise(
+    State_Count = n_distinct(state),
+    Party_Count = n_distinct(party),
+    Candidate_Count = n_distinct(candidate_name)
+  )
+
+# Display the basic summary statistics
+basic_stats %>%
+  kable(caption = "Basic Summary Statistics (Mean and SD)")
+
+
+# Display the Min and Max summary statistics
+min_max_stats %>%
+  kable(caption = "Min and Max Summary Statistics")
+
+# Display the frequency table for categorical variables
+categorical_summary %>%
+  kable(caption = "Frequency of Categorical Variables")
+```
+
+# Model
+
+## Model Specification and Justification:
+The Generalized Linear Model (GLM) that we use in this analysis is a logistic regression model. It aims to predict the likelihood that a candidate wins a poll. The outcome variable we use is a binary one, win, with 1 indicating that a candidate won a poll (defined as receiving more than 50% of the vote), and 0 indicates that they did not. 
+
+Given this binary nature of the response variable, a **logistic link function** is considered appropriate to model the probability of a candidate winning.
+
+
+$$
+\log\left(\frac{p}{1 - p}\right) = \beta_0 + \beta_1 \cdot \text{pollscore} + \beta_2 \cdot \text{sample\_size} + \beta_3 \cdot \text{state} + \beta_4 \cdot \text{party}
+$$
+Where:
+
+- $p$ is the probability of a candidate winning a poll.
+
+- $\beta_0$ is the intercept term.
+
+- $\beta_1 \cdot \text{pollscore}$ represents the effect of **pollscore**, which reflects the quality of the poll (higher scores indicate higher quality).
+
+- $\beta_2 \cdot \text{sample\_size}$ captures the influence of the number of respondents on the probability of winning (larger sample sizes typically result in more reliable estimates).
+
+- $\beta_3 \cdot \text{state}$ accounts for state-level effects, as voter preferences can vary significantly across different states.
+
+- $\beta_4 \cdot \text{party\_binary}$ models the effect of party affiliation, where **party_binary** is a binary variable (Democratic = 1, Republican = 0).
+
+The log-odds (or logit) of the probability of winning is modeled as a linear combination of the predictor variables. This transformation allows us to use linear modeling techniques since it maps the probability space (0 to 1) to the real line.
+
+## Explanation of Variables and Inclusion
+
+1. **Poll Score (`pollscore`)**: This variable represents the quality of the poll. A higher poll score suggests better methodology, and we expect it to lead to more reliable results. Polls with lower quality might have biases or errors, and this may influence the predicted probability of winning.
+
+2. **Sample Size (`sample_size`)**: Polls with larger sample sizes are expected to be more accurate since they decrease the margin of error. As a result, larger sample sizes can increase confidence in the results and lower the volatility that is present in the model's predictions.
+
+3. **State (`state`)**: Voter preferences may vary significantly across states. This is important to include since state-level effects can play a crucial role in U.S. presidential elections (particularly through the Electoral College). This is a categorical variable.
+
+4. **Party Affiliation (`party_binary`)**: Political party affiliation is an essential factor in voter preferences. Often voters don't vote for a person, they vote for the underlying philosophy of the party. This variable is transformed this into a binary variable (`party_binary`) to simplify the model with Democratic candidates being coded as 1, and Republican candidates being coded as 0.
+
+## Model Assumptions
+
+The logistic regression model used has the following underyling assumptions:
+
+- **Linearity in the log-odds**: The relationship between the predictor variables (pollscore, sample_size, state, and party_binary) and the log-odds of the outcome variable is assumed to be linear. In practice, this may not be true since there might be interaction happening between terms, in particular it is likely that state and party affiliations have interaction effects.
+
+- **Independence of observations**: Each poll is assumed to be independent of others. This assumption might be violated if there is clustering of polls by state or time period, which could introduce correlation in the errors.
+
+- **No multicollinearity**: The predictor variables are assumed to be independent of each other. Multicollinearity can distort the estimation of coefficients and affect the model's interpretation.
+
+
+## Model Fitting in R
+
+Presented below are the significant variables from the analysis.
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+
+
+# Fit the GLM model using logistic regression
+glm_model <- glm(win ~ pollscore + sample_size + state + party_binary, family = binomial, data = polls_data_cleaned)
+
+# Tidy the model output using broom's tidy() function
+glm_tidy <- tidy(glm_model)
+
+# Filter for statistically significant variables (p < 0.05)
+glm_significant <- glm_tidy %>%
+  filter(p.value < 0.05)
+
+# Display the filtered results in a clean table format
+glm_significant %>%
+  kable(caption = "Statistically Significant Variables from the GLM Model")
+
+```
+
+
+
+# Results
+
+The results from the model show that both pollscore (which reflects the quality of the poll) and sample_size (the number of respondents) significantly affect the probability of a candidate winning a poll, with p-values < 0.001, which indicates strong statistical significance.
+
+## Poll Quality (**pollscore**)
+For polls that have higher pollscore values (this indicates higher-quality polls), the model suggests that the probability of a candidate winning goes down. For example, in high-quality polls with a pollscore of 1.5+, Donald Trump's predicted chance of winning in swing states like Florida or Ohio goes down in comparison to polls of lower quality. Taking Florida as an example, while lower-quality polls might show Trump leads by 4% (52 to 48), the model predicts that higher-quality polls will be more competitive, such as Trump winning by a narrower margin of 2% (51 to 49).
+
+A similar trend is noticed for Kamala Harris. In states like Pennsylvania, where she is predicted to win by 4% (52 to 48), high-quality polls are more likely to predict this close race, whereas lower-quality polls seem to have exaggerated the margin in her favor. 
+
+This has increased relevance in competitive states where polling methodologies can influence the reported results. Since high-quality polls generally have larger sample sizes, randomized selection methods, and more rigorous data weighting they tend to have lower biases than those that may exist in lower-quality polls. 
+
+
+## Sample Size (sample_size)
+
+The model finds that sample_size significantly influences the predictions. Larger sample sizes seen in national surveys or key state polls like those in California and Texas correlate with reduced chances of a candidate winning by wide margins. This discovery suggests that polls, with sample sizes tend to moderate overly positive predictions. In California as an illustration: a substantial survey involving than 5000 participants could indicate Harris leading with 65 percent of the vote, in contrast to smaller surveys, with 500 participants, where her backing might be at 68 percent or higher. 
+
+Larger samples provide more accurate representations of the electorate by reducing the margin of error and increasing the precision of the estimates. A smaller group of participants with less than 1000 people can lead to more unpredictable results. The analysis indicates that in close election contests like those in Arizona and Florida, smaller surveys might predict a higher chance of one candidate winning by a big difference while larger surveys offer more realistic and reliable predictions. 
+
+## State effects (state)
+
+In states across the country people strongly back particular candidates, revealing differences in voting preferences by region. For example, California and New York consistently favor nominees like Kamala Harris in the upcoming 2024 election with projected vote shares exceeding 60% in each state. This aligns with historical patterns as these states have traditionally leaned towards the Democratic Party. Similarly, Texas and Florida demonstrate support for Republican contenders with Donald Trump in position to secure victory in these states by margins of 5 to 10 percentage points. 
+
+In states such as Ohio and Pennsylvania we see a tight race between the two parties with support evenly split between them. These are crucial battleground states where both Harris and Trump stand a fair shot at victory, and even slight changes in poll numbers can sway the final result significantly. For instance, the analysis suggests that Trump might win Ohio by a margin of 2% while Pennsylvania seems to tilt slightly in favor of Harris with a projected split of 52% to 48%.
+
+The analysis indicates that being part of a party (represented by the party_binary variable) does not have a substantial impact by itself when it comes to making predictions. This indicates that factors like the quality of polls, sample size and state specific elements play a more crucial role in influencing election results than just political affiliations alone．It's possible that this happens because in states the political divide is already firmly established (for example, California typically leans towards Democrats and Texas towards Republicans) which diminishes the significance of party affiliation as a major predictor. 
+
+In a state like California where Democrats typically dominate the landscape and Kamala Harris is expected to win by a large margin with over 65% of the vote secured for her victory, party affiliation plays a lesser role in influencing the outcome of the election due to her significant lead. In Texas, where Donald Trump maintains a solid lead with 55%, the impact of party affiliation is overshadowed by other factors specific to the state. 
+
+In swing states like Florida and Arizona, however, the competitive nature of the races indicate that factors other than party affiliation, such as state-level trends and poll characteristics, exert more influence. Florida in particular is forecasted to be closely contested, with Trump expected to secure 51% of the vote to Harris’s 49%, indicating that while both parties have a significant presence, local issues and voter turnout are likely to tip the scales.
+
+
+Overall, the model indicates that while party affiliation helps identify overall trends, especially in states with entrenched political identities, the real predictive power comes from state-level polling data and regional factors. Polling characteristics such as poll quality and sample size play a larger role in determining predictions, especially in battleground states, where small shifts in voter sentiment can dramatically alter the outcome.
+
+
+## Visualizing Predictions
+
+The plot below illustrates the predicted probability of a candidate winning a poll based on pollscore and sample_size. Larger sample sizes are associated with lower probabilities of winning.
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+
+
+# Predicted probability based on pollscore and sample_size
+ggplot(polls_data_cleaned, aes(x = pollscore, y = predict(glm_model, type = "response"), color = sample_size)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Predicted Probability of Winning Based on Pollscore and Sample Size", x = "Poll Score", y = "Predicted Probability")
+```
+
+# Discussion
+
+
+
+ 
+One key takeaway from this analysis is that polling quality significantly affects predictions. Polls with higher quality scores (i.e. those employing robust sampling methods, larger sample sizes, and transparent methodologies) are more likely to predict outcomes closer to the eventual election results. This highlights the importance of weighting polling data based on its quality when conducting election forecasts. The model confirms that using low-quality polls can distort predictions, especially in closely contested states, where small changes in the polling data can result in different outcomes.
+
+
+Another important finding is the strong state-level effects. It is clear that political geography plays a role in influencing election outcomes within the United States context. This is seen in situations where nationwide polls indicate a tight race, the dynamics at the state level significantly influence the ultimate outcome of the Electoral College vote. States such as California or Texas that consistently align with one party highlight how state allegiance tends to be more indicative of electoral trends, than national polling data alone. Thus, election forecasting models that do not account for state-specific trends are likely to misestimate the actual results.
+
+There are a couple of limitations in this paper. First, the binary simplification of party affiliation (Democrat = 1, Republican = 0) overlooks other political dynamics, such as third-party candidates and independent voters. These additional dynamics could influence outcomes, particularly in tight races, and should ideally be included in future models. Additionally, while the research accounts for state level effects it overlooks the impact of variables. The timing of polls in relation to election day can significantly sway results and should be factored into future modeling efforts, for increased accuracy. In the lead up to an elections days public sentiment can change quickly and surveys from weeks prior might not accurately reflect current views. 
+
+Another limitation is the assumption of independent polls. Polls are often correlated due to media coverage, shared methodologies between polling firms, or sampling biases that can affect multiple polls. This could potentially skew the results, especially if the correlated biases are not accounted for in the model.
+
+
+Future work should explore time-series forecasting models in order to factor in temporal trends in polling data, especially as election day approaches. Adding a time component could add more dynamic predictions that update as public sentiment shifts. Additionally, voter turnout predictions could significantly enhance the model's accuracy. Historical data on voter turnout by demographic and geographic area could be integrated to provide a more granular understanding of which populations are likely to vote.
+
+Moreover, future models could introduce Bayesian methods to incorporate prior knowledge about state-level voting behavior and national trends. Bayesian models could also handle the uncertainty in polling data more robustly, updating predictions as more information becomes available. Lastly, incorporating alternative data sources, such as social media sentiment analysis, could further enrich election forecasting models, allowing them to capture real-time shifts in voter preferences that may not be reflected in traditional polling data.
+
+
+
+
+
+
+
+\newpage
+\appendix
+# Appendix: YouGov Polling Methodology
+
+## Population, Frame, and Sample
+
+- **Population**: In YouGov’s presidential polling, the target population is the voting-age population (VAP). Specifically it focuses on likely voters and registered voters. In order for members of the VAP to be identified as likely voters, self-reported intent to vote or past voting behavior are valuable inputs. The group is essential in political polling because they represent those most likely to vote in the upcoming election. However, this approach is prone to over-reporting by people who are less likely to vote but claim otherwise and this introduces potential bias [@yougov2021].
+
+- **Frame**: The sampling frame is typically an extensive online panel of participants who have opted in to YouGov’s surveys. The panel is not representative of the full population - it excludes both individuals who might not be able to access the internet and those who choose not to take part in online surveys. In order to mitigate this, YouGov maintains a large and diverse panel across different demographics. Despite this, the fact that the recruitment is non-random means that some groups, such as younger, more internet-savvy individuals, may be over-represented [@yougov2021; @pew2020].
+
+- **Sample**: YouGov conducts sample selection based on demographic quotas such as age, gender, race, and region. After the data has been collected, post-stratification weighting adjusts for imbalances. While this helps in aligning the sample to the population, it remains a non-random sample, which can introduce biases, particularly concerning less engaged or harder-to-reach populations [@baker2013nonprobability; @yougov2021].
+
+## Sample Recruitment
+
+The panel for YouGov's polls is recruited through voluntary participation. There are several digital outreach campaigns, including targeted online ads and partnerships with websites. This recruitment method allows for rapid sample collection, and thus is convenient and inexpensive, but introduces **self-selection bias**—people who opt-in for online surveys may differ from those who do not. For example, those more politically engaged or who spend more time online might be over-represented in the panel [@baker2013nonprobability].
+
+Additionally, since the recruitment methods rely on internet access, by definition people without reliable internet access or technological proficiency end up being excluded. These groups are usually older adults and lower-income individuals, and thus these segments are potentially under-represented. This is addressed to an extent by quota sampling and post-stratification weighting address, but concerns about representativeness remain [@pew2020; @yougov2021].
+
+Despite this, the size of YouGov’s panel allows them to collect a broad and diverse set of responses quickly. Continuous sampling enables YouGov to access and maintain a broad demographic scope and conduct frequent surveys, and this is particularly useful for tracking political opinions over time [@yougov2021].
+
+## Sampling Approach and Trade-offs
+
+YouGov uses **quota sampling**. In quota-sampling, the sample is drawn based on specific demographic characteristics like age, gender, race, and geography. These quotas ensure that the sample matches the population in key aspects. Once data is collected, **post-stratification weighting** is applied, which further balances the sample [@baker2013nonprobability].
+
+### Strengths
+
+The key strength that quota sampling provides is allowing YouGov to collect large, diverse samples quickly and at a lower cost than traditional random sampling. This approach also ensures that under-represented groups (like younger voters or minorities) are included in the sample, which is not always possible through random sampling, especially in phone-based polling [@yougov2021].
+
+### Weaknesses
+
+Since the sample is not drawn randomly, there are concerns over the degree of representativeness for the population. Non-random samples may over-represent certain groups, specifically in thie case internet-savvy individuals or those more engaged in politics have a higher likelihood of responding. The addition of post-stratification weighting helps balance the sample, however the accuracy of the results depends heavily on how well the quotas and weights align with the population. If the quotas are off, the results can be skewed (Baker et al., 2013; Pew Research Center, 2020).
+
+## Non-response Handling
+
+Non-response occurs when certain groups are less likely to respond to surveys, which can introduce **non-response bias**. To address this, YouGov uses **weighting**. After collecting responses, statistical weightsare applied to ensure that the final sample reflects the population’s demographic makeup to a high degree[@yougov2021].
+
+In random-digit-dial (RDD) phone surveys, non-response rates are often high, sometimes exceeding 80%. By contrast, YouGov’s online panel experiences lower non-response rates because participants have pre-registered, and the presence of that anchor makes them more likely to engage [@pew2020].
+
+Partial correction for this can be achieved by weighting, which corrects for this by assigning more weight to under-represented groups. For instance, if older voters are under-sampled, their responses are given greater weight to reflect the overall population. While this helps reduce non-response bias, the accuracy of the poll is still subject to how effectively these weights adjust for missing data [@baker2013nonprobability].
+
+## Questionnaire Design
+
+### Strengths
+
+YouGov uses standardized and pre-tested questions to maintain a high level of clarity and consistency across surveys and reducing the chances of confusing or biased questions. Often, they will employ a technique called **question batteries**, where respondents answer multiple related questions on the same topic. This allows for deeper insights into voters’ preferences and opinions than can be achieved by individual unrelated questions [@yougov2021].
+
+Additionally, YouGov implements randomization on the order of both questions and answer choices to minimize **order effects**—where the order in which questions or options are presented can influence how respondents answer. The use of visual aids, such as images of political candidates, helps ensure respondents correctly identify key figures [@pew2020].
+
+### Weaknesses
+
+One drawback of YouGov's methodology is **survey fatigue**, especially since there are often multiple related questions on the same topic. Respondents participating in long online surveys may lose focus or rush through the latter parts, and this potentially reduces the quality of their answers. This is especially problematic for questions placed toward the end of the survey. In addition, because YouGov surveys are conducted entirely online, they may exclude individuals who prefer other polling methods, such as phone or face-to-face interviews, or who struggle with technology [@baker2013nonprobability; @yougov2021].
+
+## Key Features
+
+- **Post-stratification weighting** is crucial for aligning the sample with the population's demographics. The weights ensure that groups who are under-represented in the sample (such as older voters) are appropriately reflected in the final results [@yougov2021]. 
+- **Dynamic sampling** enables YouGov to adjust their sample in real-time to target specific groups. As an example, if young voters are under-represented in an initial sample, YouGov can recruit additional respondents from that group to balance the sample [@yougov2021].
+
+# Appendix: Idealized Methodology and Survey for Forecasting the U.S. Presidential Election
+
+## Overview and Budget Allocation
+
+In this appendix, we detail methodology for forecasting the U.S. presidential election using a budget of $100,000. The methodology covers sampling, respondent recruitment, data validation, and poll aggregation. The survey will be implemented using Google Forms, and a link to the survey is added below.
+
+**Budget Allocation**:
+
+- **Sampling and Recruitment**: $60,000
+
+- **Survey Platform and Technology**: $5,000
+
+- **Data Cleaning and Validation**: $10,000
+
+- **Poll Aggregation Software**: $10,000
+
+- **Reporting and Analysis**: $15,000
+
+
+## Sampling Approach
+
+### Stratified Random Sampling
+
+A **stratified random sampling** method is adopted. This ensures representativeness across demographic subgroups. Groups are defined by **age**, **gender**, **race/ethnicity**, **education level**, and **geography**. For example, **18-29-year-olds** represent 20% of the U.S. population, so 20% of the sample will be drawn from this age group. 
+
+A **sample size of 5,000 respondents** provides a **margin of error of ±1.5%** and a **confidence level of 95%**.
+
+#### Over-Sampling
+
+Underrepresented groups, such as rural populations and racial minorities, will be **over-sampled** to ensure adequate representation. After this, adjustments will be made using **post-stratification weighting** to align with U.S. Census data.
+
+### Recruitment Strategy
+
+Respondents will be recruited via:
+
+- **MTurk**, **Prolific**, and **YouGov** panels to access diverse respondents.
+
+- **Targeted online ads** (Facebook, Instagram, etc.) - this allows us reach key demographic groups, ensuring representation from rural, suburban, and urban areas. Ads will aim for a **response rate of 70%** to ensure data reliability.
+
+---
+
+## Survey Design
+
+### Survey Structure
+
+The intention of the survey is to capture voter sentiment, behavior, and key issues. Estimated **completion time** is under **10 minutes**, which allows us to target a **completion rate of 80%**.
+
+### Sections:
+1. **Screening Questions**:
+   - U.S. citizenship and voter registration status.
+   - Intention to vote.
+2. **Demographics**:
+   - Questions cover **age, gender, race/ethnicity, education, income level, and region**.
+3. **Voting Intentions**:
+   - “If the election were held today, who would you vote for?”
+     - **Kamala Harris** (Democratic)
+     - **Donald Trump** (Republican)
+     - **Undecided**
+   - Likelihood of voting rated on a **scale of 1-10**.
+4. **Issues Important to Voting**:
+   - Key issues (e.g., **Economy, Healthcare, Immigration, Climate Change**), ranked on a **scale of 1-5**.
+5. **Candidate Favorability**:
+   - Favorability ratings for **Kamala Harris** and **Donald Trump**, rated on a **5-point scale**.
+6. **Political Engagement**:
+   - This section will include questions on how closely respondents follow election news.
+7. **Open-ended Questions**:
+   - We end by asking open-ended questions around What factors the repsondents think most influence the voting decision?
+
+### Data Quality Checks
+
+The survey includes **attention-check questions** and tracks **response time** to flag low-quality responses. In ordet to reduce noise due to bots filling these up quickly, responses completed in less than **3 minutes** will be excluded.
+
+---
+
+## Data Validation and Post-Survey Processing
+
+### Data Cleaning
+
+- **Duplicate response filtering** using IP addresses.
+- **Post-stratification weighting** - this will be used to adjust the sample to match U.S. population proportions based on gender, race, and age.
+
+### Poll Aggregation
+
+Results from the survey will be aggregated with other polls (e.g., **Gallup**, **Ipsos**, **YouGov**) using **weighted averages**. **Bayesian updating** will incorporate historical trends and account for shifts in voter behavior. The aggregated margin of error is projected at **±1%**, ensuring high forecast precision.
+
+---
+
+## Survey Implementation
+
+A sample version of the survey has been created using Google Forms. It can be accessed here:
+
+**[Google Forms: U.S. Presidential Election Forecast Survey](ADD LINK HERE)**  
+
+
+---
+
+## Survey Copy
+
+### U.S. Presidential Election Forecast Survey
+
+1. **Are you a U.S. citizen?**
+   - Yes
+   - No
+
+2. **Are you registered to vote in the upcoming election?**
+   - Yes
+   - No
+
+3. **Do you intend to vote in the upcoming election?**
+   - Yes
+   - No
+   - Unsure
+
+4. **What is your age?**
+   - 18-29
+   - 30-44
+   - 45-64
+   - 65+
+
+5. **What is your gender?**
+   - Male
+   - Female
+   - Non-binary
+   - Prefer not to say
+
+6. **What is your race/ethnicity?**
+   - White
+   - Black or African American
+   - Hispanic or Latino
+   - Asian
+   - Other
+
+7. **What is your highest level of education?**
+   - High school or less
+   - Some college
+   - College degree
+   - Postgraduate degree
+
+8. **If the election were held today, who would you vote for?**
+   - **Kamala Harris** (Democratic)
+   - **Donald Trump** (Republican)
+   - Undecided
+
+9. **How important is the issue of the economy in your decision?**
+   - Extremely important
+   - Very important
+   - Moderately important
+   - Slightly important
+   - Not important at all
+
+10. **How favorable is your opinion of Kamala Harris?**
+    - Very favorable
+    - Somewhat favorable
+    - Neutral
+    - Somewhat unfavorable
+    - Very unfavorable
+
+11. **How favorable is your opinion of Donald Trump?**
+    - Very favorable
+    - Somewhat favorable
+    - Neutral
+    - Somewhat unfavorable
+    - Very unfavorable
+
+\newpage
+
+# References
+
+
