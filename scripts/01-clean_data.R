@@ -9,6 +9,9 @@
 library(tidyverse)
 # Load the gt library for better visualization of some tables
 library(gt)
+# to save cleaned data as a parquet file
+library(arrow)
+
 
 #### Clean data ####
 polls_data <- read_csv("data/raw_data/election_polls.csv")
@@ -33,3 +36,4 @@ polls_data_cleaned %>%
   )
 #### Save data ####
 write_csv(polls_data_cleaned, "data/analysis_data/election_polls_cleaned.csv")
+write_parquet(polls_data_cleaned, "data/analysis_data/election_polls_cleaned.parquet")
