@@ -4,8 +4,6 @@
 # Date: 25 Oct 2024
 # Contact: marzia.zaidi@utoronto.ca 
 # License: MIT
-# Pre-requisites: Need to have the data downloaded
-
 
 #### Workspace setup ####
 library(tidyverse)
@@ -14,10 +12,10 @@ library(gt)
 
 #### Clean data ####
 polls_data <- read_csv("data/raw_data/election_polls.csv")
-# Select relevant columns for analysis
+# Select relevant columns for analysis, including end_date
 polls_data_cleaned <- polls_data %>%
-  select(pollscore, sample_size, state, party, candidate_name, pct) %>%
-  filter(!is.na(pollscore) & !is.na(sample_size) & !is.na(state) & !is.na(pct))
+  select(pollscore, sample_size, state, party, candidate_name, pct, end_date) %>%
+  filter(!is.na(pollscore) & !is.na(sample_size) & !is.na(state) & !is.na(pct) & !is.na(end_date))
 
 
 # Create binary 'win' variable where pct > 50 is considered a win
