@@ -1,13 +1,13 @@
 ---
-title: "Forecasting the 2024 US Presidential Election: Poll Quality, Sample Size, and Party Vote Share"
-subtitle: "A Generalized Linear Model Based on Aggregated Poll Data with Moderate Poll Quality and Close Party Competition"
+title: "Forecasting the 2024 U.S. Presidential Election: Analyzing Poll Quality, Sample Size, and Regional Variations"
+subtitle: "Donald Trump Leads Kamala Harris by 0.6% Nationally with State-Level Battleground Trends Highlighted"
 author: 
   - Marzia Zaidi
 thanks: "Code and data are available at: [https://github.com/Marziia/us-presidential-election-analysis](https://github.com/Marziia/us-presidential-election-analysis)."
 date: today
 date-format: long
 abstract: |
-  This paper presents a model that forecasts the 2024 U.S. presidential election using data from over 14,000 aggregated polls. The model incorporates poll quality, sample size, state effects, and party affiliation to assess the likelihood of candidate success. Results from the analysis show that Donald Trump leads slightly with 43.7% of the vote, compared to Kamala Harris at 43.1%, a difference of 0.6%. In key battleground states, Trump is expected to win Florida by 51% to 49%, and Harris holds a higher edge in Pennsylvania at 52% to 48%. Poll quality is moderate for both candidates. The analysis shows that poll characteristics and state-specific factors play important roles in shaping election predictions.
+  This paper presents a model that forecasts the 2024 U.S. presidential election using data from over 14,000 aggregated polls. The model incorporates poll quality, sample size, state effects, and party affiliation to assess the likelihood of candidate success. Results from the analysis show that Donald Trump leads slightly with 43.7% of the vote, compared to Kamala Harris at 43.1%, a difference of 0.6% that lies within the margin of error. In key battleground states, Trump is expected to win Florida by 51% to 49%, and Harris holds a higher edge in Pennsylvania at 52% to 48%. Poll quality is moderate for both candidates. The analysis shows that poll characteristics and state-specific factors play important roles in shaping election predictions.
 
 format: pdf
 number-sections: true
@@ -31,6 +31,10 @@ library(gt)
 library(knitr)
 # The broom library is used for converting the model output into a tidy data frame
 library(broom)
+# this is used for presenting model output
+library(modelsummary)
+# For date handling
+library(lubridate)  
 
 
 # Load data
@@ -43,12 +47,7 @@ Election forecasting plays an important role in understanding voter behavior and
 
 Aggregating polling data from various sources can improve prediction accuracy by minimizing errors and biases in individual polls [@blumenthal2014; @pasek2015]. We consider the following factors to augment the aggregation -  poll quality, sample size, and state-level differences. This study addresses how each of these specific factors contribute to predicting the results of the U.S. presidential election. National polling models already exist, and the focus here is on the combined impact of poll quality and state-level differences on predictions. 
 
-We use around 14,000 aggregated polls compiled by sources FiveThirtyEight [@fivethirtyeight2024]. The polls in differ in methodology, transparency, and sample sizes, and these can all affect reliability. Additionally, voter preferences can vary by region, and "battleground" states like Florida and Pennsylvania require a deeper analysis, as their outcomes are critical to the result of the election.
-
-The model's results show Donald Trump has a slight lead at the national level. He captures 43.7% of the popular vote with Kamala Harris coming in at 43.1%. Poll quality and sample size are shown to significantly affect predictions. For instance, higher pollscore values, such as 1.5, are associated with the predictions being more balanced. For example, in Florida, higher-quality polls decrease Trump's lead from 52% to 51%, and similarly, in Pennsylvania, Kamala Harris' lead tightens from 53% to 52% when the polls are of higher quality.
-
-As expected, larger sample sizes, such as those with over 5,000 people responding, results in more reliable estimates. For example, in Arizona, Trump's predicted support goes down from 51% where the polls are smaller to 49% in larger ones, and this reflects the increased accuracy of larger samples.
-
+We use around 14,000 aggregated polls compiled by sources FiveThirtyEight [@fivethirtyeight2024]. The primary estimand of this study is the probability that a candidate wins a given poll. The polls in differ in methodology, transparency, and sample sizes, and these can all affect reliability. Additionally, voter preferences can vary by region, and "battleground" states like Florida and Pennsylvania require a deeper analysis, as their outcomes are critical to the result of the election. In estimating such probabilities, we model candidate success probabilities for each state and national level, taking into account polling data variability. Our findings indicate a narrow national lead for Donald Trump at 43.7%, compared to Kamala Harris at 43.1%, with state-level dynamics playing a significant role. 
 
 The paper is structured as follows: we begin by describing the dataset and its key variables, after which the model is presented, followed by the results and their implications. We use the statistical programming language R [@citeR] to conduct our analysis. In the last part of the paper, we critique the method itself and attempt to abstract some of the learnings into our understanding of the world.
 
@@ -67,7 +66,27 @@ The dataset used in this study consists of polling data from the 2024 U.S. presi
 - **pct**: The percentage of votes a candidate received in the poll.
 - **win**: A binary variable indicating whether the candidate won the poll (1 = win, 0 = lose).
 
+
 The analysis focuses on how **pollscore**, **sample_size**, and **state** influence the probability of a candidate winning a poll. The **pct** variable was used to create the binary **win** variable.
+
+## Measurement
+
+The data used in this study was collected from various public opinion polls aggregated by FiveThirtyEight. Each poll in the dataset reflects an attempt to measure voter preferences and sentiments leading up to the 2024 U.S. presidential election. Below, we explain how each key variable was measured:
+
+- **pollscore**: This variable represents the quality of the poll, assigned by FiveThirtyEight based on the pollster’s historical accuracy, transparency, and methodology. A higher score indicates a more reliable poll, reflecting the confidence we have in the poll's ability to capture true voter sentiment. This quality assessment attempts to translate complex survey methodologies into a single, interpretable metric.
+
+- **sample_size**: This measures the number of respondents who participated in each poll. It is a direct count and serves as an indicator of the poll's reliability. Larger sample sizes are generally more accurate and less subject to random sampling error. For this analysis, sample_size helps adjust the predictions based on the level of confidence in the survey results.
+
+- **state**: The state variable records where the poll was conducted. It helps capture regional variations in voter preferences. Since U.S. presidential elections rely on the Electoral College, state-level data is crucial for accurately forecasting the election outcome.
+
+- **party**: This binary variable indicates the party affiliation of the candidate: 1 for Democrats (e.g., Kamala Harris) and 0 for Republicans (e.g., Donald Trump). It captures the fundamental partisan divide that influences voting behavior.
+
+- **candidate_name**: The candidate_name variable records the name of the candidate whose support is being measured in the poll. It helps differentiate between competing candidates and analyze their individual levels of support.
+
+- **pct**: This represents the percentage of survey respondents who supported a specific candidate in a poll. It is a direct measurement from each survey, reflecting voter preference at the time the poll was conducted.
+
+- **win**: The win variable is binary, indicating whether a candidate had majority support in a poll (1 for winning, 0 for not winning). It simplifies the analysis by focusing on which candidate is favored in each poll.
+
 
 ## Data Cleaning and Preprocessing
 
@@ -131,6 +150,140 @@ min_max_stats %>%
 categorical_summary %>%
   kable(caption = "Frequency of Categorical Variables")
 ```
+
+### Graphical analysis and discussion
+
+#### Poll Quality (pollscore)
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+#| fig.width: 4
+#| fig.height: 3
+#| fig.align: "center"
+# Plotting pollscore distribution
+ggplot(polls_data_cleaned, aes(x = pollscore)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Poll Quality Scores", x = "Poll Score", y = "Frequency")
+```
+
+
+**Discussion:** A moderate spread between the poll quality scores is seen in the histogram, with a central peak at -0.38. That suggests good polls have average or above-average reliability. pollscore differences reflect differences in polling methodology, transparency and sample representativeness.
+
+
+#### Sample Size (sample_size)
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+#| fig.width: 4
+#| fig.height: 3
+#| fig.align: "center"
+
+# Plotting sample_size distribution
+ggplot(polls_data_cleaned, aes(x = sample_size)) +
+  geom_histogram(binwidth = 100, fill = "green", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Sample Sizes", x = "Sample Size", y = "Frequency")
+```
+
+**Discussion**: Sample sizes range from 1,650 respondents to over 10,000. Small sample sizes dominate, but many polls have larger samples. This variability affects the precision of polling estimates; larger samples are generally more stable.
+
+#### State
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+#| fig.width: 4
+#| fig.height: 3
+#| fig.align: "center"
+# Plotting the number of polls per state
+ggplot(polls_data_cleaned, aes(x = state)) +
+  geom_bar(fill = "orange") +
+  theme_minimal() +
+  labs(title = "Number of Polls by State", x = "State", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+**Discussion**: Polls vary widely by state. More polls are concentrated in battlefield states like Florida, Pennsylvania, and Ohio than in less contested states. That demonstrates how these states are strategically important to the Electoral College and how regional differences influence the model's predictions.
+
+
+#### Candidate Name (candidate_name)
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+#| fig.width: 4
+#| fig.height: 3
+#| fig.align: "center"
+# Filter the data to only include Kamala Harris and Donald Trump
+polls_data_filtered <- polls_data_cleaned %>%
+  filter(candidate_name %in% c("Kamala Harris", "Donald Trump"))
+
+polls_data_filtered %>%
+  count(candidate_name) %>%
+  ggplot(aes(x = candidate_name, y = n, fill = candidate_name)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Number of Polls for Kamala Harris and Donald Trump", x = "Candidate", y = "Count") +
+  scale_fill_manual(values = c("blue", "red"))
+```
+
+**Discussion**: Polls are higher for Donald Trump versus Kamala Harris. This imbalance suggests a greater emphasis on Trump in the polling data, which could bias the model's predictions toward him based on the larger volume of data.
+
+#### Percentage of Vote (pct)
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+#| fig.width: 4
+#| fig.height: 3
+#| fig.align: "center"
+
+# Plotting pct distribution
+ggplot(polls_data_cleaned, aes(x = pct)) +
+  geom_histogram(binwidth = 1, fill = "purple", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Candidate Vote Percentages", x = "Percentage (%)", y = "Frequency")
+```
+
+**Discussion**: The distribution of candidate vote percentages shows a relatively even split between the two major parties. This indicates a highly competitive race, which is consistent with the narrow margin in national polling averages.
+
+
+#### Winning Polls (win)
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false 
+#| fig.width: 4
+#| fig.height: 3
+#| fig.align: "center"
+
+# Plotting win distribution
+polls_data_cleaned %>%
+  count(win) %>%
+  ggplot(aes(x = as.factor(win), y = n, fill = as.factor(win))) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Winning Polls",
+    x = "Win (1 = Yes, 0 = No)",
+    y = "Count",
+    fill = "Win Status"  # This renames the legend title
+  ) +
+  scale_fill_manual(values = c("gray", "gold"))
+```
+
+**Discussion**: The distribution of candidate vote percentages is fairly even between the two major parties. This points to a tight race that reflects the tight margin in national polling averages.
+
+
 
 # Model
 
