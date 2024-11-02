@@ -42,7 +42,7 @@ simulated_election_data <- tibble(
 )
 
 #### Save data ####
-write_csv(simulated_election_data, "data/00-simulated_data/us_election_simulated_data.csv")
+write_csv(simulated_election_data, "data/simulated_data/us_election_simulated_data.csv")
 
 #### Display the simulated data ####
 print(simulated_election_data)
