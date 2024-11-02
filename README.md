@@ -1,4 +1,4 @@
-# Forecasting the 2024 US Presidential Election: Poll Quality, Sample Size, and Party Vote Share using A Generalized Linear Model Based on Aggregated Poll Data with Moderate Poll Quality and Close Party Competition
+# US Presidential Election Forecasting
 
 ## Overview
 
