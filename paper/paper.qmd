@@ -188,7 +188,7 @@ ggplot(polls_data_cleaned, aes(x = pollscore)) +
 ```
 
 
-**Discussion:** A moderate spread between the poll quality scores is seen in the histogram, with a central peak at -0.38. That suggests good polls have average or above-average reliability. pollscore differences reflect differences in polling methodology, transparency and sample representativeness.
+A moderate spread between the poll quality scores is seen in the histogram, with a central peak at -0.38. That suggests good polls have average or above-average reliability. pollscore differences reflect differences in polling methodology, transparency and sample representativeness.
 
 
 #### Sample Size (sample_size)
@@ -208,7 +208,7 @@ ggplot(polls_data_cleaned, aes(x = sample_size)) +
   labs(title = "Distribution of Sample Sizes", x = "Sample Size", y = "Frequency")
 ```
 
-**Discussion**: Sample sizes range from 1,650 respondents to over 10,000. Small sample sizes dominate, but many polls have larger samples. This variability affects the precision of polling estimates; larger samples are generally more stable.
+Sample sizes range from 1,650 respondents to over 10,000. Small sample sizes dominate, but many polls have larger samples. This variability affects the precision of polling estimates; larger samples are generally more stable.
 
 #### State
 
@@ -224,10 +224,11 @@ ggplot(polls_data_cleaned, aes(x = state)) +
   geom_bar(fill = "orange") +
   theme_minimal() +
   labs(title = "Number of Polls by State", x = "State", y = "Count") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6))
+
 ```
 
-**Discussion**: Polls vary widely by state. More polls are concentrated in battlefield states like Florida, Pennsylvania, and Ohio than in less contested states. That demonstrates how these states are strategically important to the Electoral College and how regional differences influence the model's predictions.
+Polls vary widely by state. More polls are concentrated in battlefield states like Florida, Pennsylvania, and Ohio than in less contested states. That demonstrates how these states are strategically important to the Electoral College and how regional differences influence the model's predictions.
 
 
 #### Candidate Name (candidate_name)
@@ -252,7 +253,7 @@ polls_data_filtered %>%
   scale_fill_manual(values = c("blue", "red"))
 ```
 
-**Discussion**: Polls are higher for Donald Trump versus Kamala Harris. This imbalance suggests a greater emphasis on Trump in the polling data, which could bias the model's predictions toward him based on the larger volume of data.
+Polls are higher for Donald Trump versus Kamala Harris. This imbalance suggests a greater emphasis on Trump in the polling data, which could bias the model's predictions toward him based on the larger volume of data.
 
 #### Percentage of Vote (pct)
 
@@ -271,7 +272,7 @@ ggplot(polls_data_cleaned, aes(x = pct)) +
   labs(title = "Distribution of Candidate Vote Percentages", x = "Percentage (%)", y = "Frequency")
 ```
 
-**Discussion**: The distribution of candidate vote percentages shows a relatively even split between the two major parties. This indicates a highly competitive race, which is consistent with the narrow margin in national polling averages.
+The distribution of candidate vote percentages shows a relatively even split between the two major parties. This indicates a highly competitive race, which is consistent with the narrow margin in national polling averages.
 
 
 #### Winning Polls (win)
@@ -299,7 +300,7 @@ polls_data_cleaned %>%
   scale_fill_manual(values = c("gray", "gold"))
 ```
 
-**Discussion**: The distribution of candidate vote percentages is fairly even between the two major parties. This points to a tight race that reflects the tight margin in national polling averages.
+The distribution of candidate vote percentages is fairly even between the two major parties. This points to a tight race that reflects the tight margin in national polling averages.
 
 
 
