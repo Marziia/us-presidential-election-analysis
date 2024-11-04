@@ -45,7 +45,7 @@ Aggregating polling data from various sources can improve prediction accuracy by
 
 We use around 14,000 aggregated polls compiled by sources FiveThirtyEight [@fivethirtyeight2024]. The primary estimand of this study is the probability that a candidate wins a given poll. The polls in differ in methodology, transparency, and sample sizes, and these can all affect reliability. Additionally, voter preferences can vary by region, and "battleground" states like Florida and Pennsylvania require a deeper analysis, as their outcomes are critical to the result of the election. In estimating such probabilities, we model candidate success probabilities for each state and national level, taking into account polling data variability. Our findings indicate a narrow national lead for Donald Trump at 43.7%, compared to Kamala Harris at 43.1%, with state-level dynamics playing a significant role. 
 
-We start by describing the dataset in detail and discussing key variables in the Data section (see [Data](#data)), where we present summary statistics and visualizations to better understand the data. The Model section (see [Model](#model)) introduces the Generalized Linear Model (GLM). This includes an exaplanation of the mathematical framework, assumptions, and variable selection process. We then detail the Results (see [Results](#results)), where we highlight key findings on how poll characteristics and state-level differences impact election forecasts. Finally, the Discussion (see [Discussion](#discussion)) addresses the implications of our findings, the limitations of our approach, and suggestions for future research. In the last part of the paper, we critique the method itself and attempt to abstract some of the learnings into our understanding of the world.
+We start by describing the dataset in detail and discussing key variables in the Data section (see [Data](#data)), where we present summary statistics and visualizations to better understand the data. The Model section (see [Model](#model)) introduces the Generalized Linear Model (GLM). This includes an explanation of the mathematical framework, assumptions, and variable selection process. We then detail the Results (see [Results](#results)), where we highlight key findings on how poll characteristics and state-level differences impact election forecasts. Finally, the Discussion (see [Discussion](#discussion)) addresses the implications of our findings, the limitations of our approach, and suggestions for future research. In the last part of the paper, we critique the method itself and attempt to abstract some of the learnings into our understanding of the world.
 
 We use the statistical programming language R [@citeR] to conduct our analysis, the tidyverse package for data manipulation and visualization [@tidyverse] and tables were created using the gt package [@gt]. We used the knitr package to format tables and generate a dynamic report [@knitr]. Finally, model summaries were tidied using the broom package [@broom].
 
@@ -345,7 +345,7 @@ The log-odds (or logit) of the probability of winning is modeled as a linear com
 
 ## Model Assumptions
 
-The logistic regression model used has the following underyling assumptions:
+The logistic regression model used has the following underlying assumptions:
 
 - **Linearity in the log-odds**: The relationship between the predictor variables (pollscore, sample_size, state, and party_binary) and the log-odds of the outcome variable is assumed to be linear. In practice, this may not be true since there might be interaction happening between terms, in particular it is likely that state and party affiliations have interaction effects.
 
@@ -504,11 +504,11 @@ The key strength that quota sampling provides is allowing YouGov to collect larg
 
 ### Weaknesses
 
-Since the sample is not drawn randomly, there are concerns over the degree of representativeness for the population. Non-random samples may over-represent certain groups, specifically in thie case internet-savvy individuals or those more engaged in politics have a higher likelihood of responding. The addition of post-stratification weighting helps balance the sample, however the accuracy of the results depends heavily on how well the quotas and weights align with the population. If the quotas are off, the results can be skewed (Baker et al., 2013; Pew Research Center, 2020).
+Since the sample is not drawn randomly, there are concerns over the degree of representativeness for the population. Non-random samples may over-represent certain groups, specifically in this case internet-savvy individuals or those more engaged in politics have a higher likelihood of responding. The addition of post-stratification weighting helps balance the sample, however the accuracy of the results depends heavily on how well the quotas and weights align with the population. If the quotas are off, the results can be skewed (Baker et al., 2013; Pew Research Center, 2020).
 
 ## Non-response Handling
 
-Non-response occurs when certain groups are less likely to respond to surveys, which can introduce **non-response bias**. To address this, YouGov uses **weighting**. After collecting responses, statistical weightsare applied to ensure that the final sample reflects the population’s demographic makeup to a high degree[@yougov2021].
+Non-response occurs when certain groups are less likely to respond to surveys, which can introduce **non-response bias**. To address this, YouGov uses **weighting**. After collecting responses, statistical weights are applied to ensure that the final sample reflects the population’s demographic makeup to a high degree[@yougov2021].
 
 In random-digit-dial (RDD) phone surveys, non-response rates are often high, sometimes exceeding 80%. By contrast, YouGov’s online panel experiences lower non-response rates because participants have pre-registered, and the presence of that anchor makes them more likely to engage [@pew2020].
 
@@ -571,7 +571,7 @@ Underrepresented groups, such as rural populations and racial minorities, will b
 
 Respondents will be recruited via:
 
-- **MTurk**, **Prolific**, and **YouGov** panels to access diverse respondents.Studies show that online recruitment platforms may produce quality survey data when sampling and weighting are done properly [@huff2015].
+- **MTurk**, **Prolific**, and **YouGov** panels to access diverse respondents. Studies show that online recruitment platforms may produce quality survey data when sampling and weighting are done properly [@huff2015].
 
 - **Targeted online ads** (Facebook, Instagram, etc.) - this allows us reach key demographic groups, ensuring representation from rural, suburban, and urban areas. Ads will aim for a **response rate of 70%** to ensure data reliability.
 
@@ -602,11 +602,11 @@ The intention of the survey is to capture voter sentiment, behavior, and key iss
 6. **Political Engagement**:
    - This section will include questions on how closely respondents follow election news.
 7. **Open-ended Questions**:
-   - We end by asking open-ended questions around What factors the repsondents think most influence the voting decision?
+   - We end by asking open-ended questions around What factors the respondents think most influence the voting decision?
 
 ### Data Quality Checks
 
-The survey includes **attention-check questions** and tracks **response time** to flag low-quality responses. In ordet to reduce noise due to bots filling these up quickly, responses completed in less than **3 minutes** will be excluded.
+The survey includes **attention-check questions** and tracks **response time** to flag low-quality responses. In order to reduce noise due to bots filling these up quickly, responses completed in less than **3 minutes** will be excluded.
 
 ---
 
